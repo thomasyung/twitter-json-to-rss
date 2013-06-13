@@ -1,10 +1,22 @@
 <?php
 	header("Content-Type: application/xml; charset=UTF-8");
+	require 'tmhOAuth/tmhOAuth.php';
+	require 'tmhOAuth/tmhUtilities.php';
+	$tmhOAuth = new tmhOAuth(array(  // Copy and paste in your Twitter app's ...
+ 		'consumer_key'    => '', // consumer key
+  		'consumer_secret' => '', // consumer secret
+  		'user_token'      => '', // access token
+  		'user_secret'     => '', // access token secret
+	));
 	$screen_name = $_GET['screen_name'];
 	$list_name = $_GET['list_name'];
-	$statuses_url = 'http://api.twitter.com/1/'.$screen_name.'/lists/'.$list_name.'/statuses.json?per_page=100';
-	$fetch_json = file_get_contents($statuses_url);
-	$return = json_decode($fetch_json);
+	$statuses_url = '1.1/lists/statuses.json';
+	$code = $tmhOAuth->request('GET', $tmhOAuth->url($statuses_url), array(
+		'slug'=>$list_name,
+		'owner_screen_name'=>$screen_name,
+		'count'=>100,
+	));
+	$return = json_decode($tmhOAuth->response['response']);
 	$now = date("D, d M Y H:i:s T");
 	$link = htmlspecialchars('http://'.$_SERVER['SERVER_NAME'].$_SERVER['SCRIPT_NAME'].'?'.$_SERVER['QUERY_STRING']);
 ?>
@@ -18,7 +30,7 @@
 		<lastBuildDate><?php echo $now; ?></lastBuildDate>
 	<?php foreach ($return as $line){ ?>
 	<item>
-		<title><?php echo htmlspecialchars(htmlspecialchars_decode($line->user->screen_name.": ".strip_tags($line->text))); ?></title>
+		<title><?php echo htmlspecialchars(htmlspecialchars_decode($line->user->name.": ".strip_tags($line->text))); ?></title>
 		<description><?php echo htmlspecialchars(htmlspecialchars_decode(strip_tags($line->text))); ?></description>
 		<guid><?php echo htmlspecialchars("https://twitter.com/".$line->user->screen_name."/statuses/".$line->id_str); ?></guid>
 		<link><?php echo htmlspecialchars("https://twitter.com/".$line->user->screen_name."/statuses/".$line->id_str); ?></link>
