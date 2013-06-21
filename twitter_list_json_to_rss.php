@@ -1,7 +1,6 @@
 <?php
 	header("Content-Type: application/xml; charset=UTF-8");
 	require 'tmhOAuth/tmhOAuth.php';
-	require 'tmhOAuth/tmhUtilities.php';
 	$tmhOAuth = new tmhOAuth(array(  // Copy and paste in your Twitter app's ...
  		'consumer_key'    => '', // consumer key
   		'consumer_secret' => '', // consumer secret
