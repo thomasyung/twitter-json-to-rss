@@ -1,11 +1,7 @@
 <?php
-  require 'tmhOAuth/tmhOAuth.php';
-	$tmhOAuth = new tmhOAuth(array( // Copy and paste in your Twitter app's ...
- 		'consumer_key'    => '',	// consumer key
-  		'consumer_secret' => '',	// consumer secret
-  		'user_token'      => '',	// access token
-  		'user_secret'     => '',	// access token secret
-	));
+	require 'tmhOAuth/tmhOAuth.php';
+	require 'twitter_auth.php';
+	$tmhOAuth = new tmhOAuth($twitter_auth);
 	$screen_name = null;
 	if (isset($_GET['screen_name'])){
 		$screen_name = $_GET['screen_name'];

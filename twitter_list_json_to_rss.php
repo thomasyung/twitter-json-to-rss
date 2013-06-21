@@ -1,12 +1,8 @@
 <?php
 	header("Content-Type: application/xml; charset=UTF-8");
 	require 'tmhOAuth/tmhOAuth.php';
-	$tmhOAuth = new tmhOAuth(array(  // Copy and paste in your Twitter app's ...
- 		'consumer_key'    => '', // consumer key
-  		'consumer_secret' => '', // consumer secret
-  		'user_token'      => '', // access token
-  		'user_secret'     => '', // access token secret
-	));
+	require 'twitter_auth.php';
+	$tmhOAuth = new tmhOAuth($twitter_auth);
 	$screen_name = $_GET['screen_name'];
 	$list_name = $_GET['list_name'];
 	$statuses_url = '1.1/lists/statuses.json';
