@@ -30,6 +30,11 @@ To subscribe to a user's list, simply add the list_name parameter:
 
 http://[server_name]/twitter_json_to_rss.php?screen_name=[user_name]&list_name=[list_name]
 
+To subscribe to a hashtag feed, use a "q" parameter:
+
+http://[server_name]/twitter_json_to_rss.php?q=[searchstring]
+Note: if you want to specify a hashtag, url-encode it (= %23 instead of #). For instance, to search on a "#design" hashtag, the searchstring is "%23design".
+
 For example, you can try one of the Twitter lists that I subscribe to:
 
 http://thomasyung.com/twitter_json_to_rss.php?screen_name=thomasyung&list_name=mobiledev
