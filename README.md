@@ -37,7 +37,7 @@ Note: if you want to specify a hashtag, url-encode it (= %23 instead of #). For 
 
 For example, you can try one of the Twitter lists that I subscribe to:
 
-http://thomasyung.com/twitter_json_to_rss.php?screen_name=thomasyung&list_name=mobiledev
+http://thomasyung.com/twitter_rss/twitter_json_to_rss.php?screen_name=thomasyung&list_name=mobiledev
 
 **Update (June 13, 2013)**
 * Twitter removed v1.0 of their API and are forcing all v1.1 API requests via OAuth and SSL. In short, no more public access to the JSON APIs. To get around this, we now have to do some extra setup to get our twitter-json-to-rss PHP script to work. 
