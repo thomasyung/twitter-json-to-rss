@@ -45,7 +45,8 @@ if (isset($list_name)){
 	$usage = 'hashtag';
 	$statuses_url = '1.1/search/tweets';
 	$options = array(
-		'q'=>urlencode($search)
+		'q'=>urlencode($search),
+		'count'=>100,
 	);
 	$title = $search;
 	$description = $search;
