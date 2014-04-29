@@ -26,6 +26,7 @@ if (isset($_GET['list_name'])){
 $search = null;
 if (isset($_GET['q'])){
 	$search = $_GET['q'];
+	$lang = $_GET['lang'];
 }
 if (!isset($screen_name) && !isset($search)){
 	echo "Oops! screen_name parameter or hashtag is required.";
@@ -46,7 +47,8 @@ if (isset($list_name)){
 	$statuses_url = '1.1/search/tweets';
 	$options = array(
 		'q'=>urlencode($search),
-		'count'=>100,
+		'lang'=>$lang,
+		'count'=>100
 	);
 	$title = $search;
 	$description = $search;
