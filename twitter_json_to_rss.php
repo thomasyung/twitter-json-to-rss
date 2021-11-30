@@ -26,12 +26,13 @@ if (isset($_GET['list_name'])){
 $search = null;
 if (isset($_GET['q'])){
 	$search = $_GET['q'];
-	$lang = $_GET['lang'];
+	$lang = (isset($_GET['lang'])) ? $_GET['lang'] : "en";
 }
 if (!isset($screen_name) && !isset($search)){
 	echo "Oops! screen_name parameter or hashtag is required.";
 	exit();
 }
+$usage = null;
 if (isset($list_name)){
 	$statuses_url = '1.1/lists/statuses.json';
 	$options = array(
@@ -47,8 +48,8 @@ if (isset($list_name)){
 	$statuses_url = '1.1/search/tweets';
 	$options = array(
 		'q'=>urlencode($search),
+		'count'=>100,
 		'lang'=>$lang,
-		'count'=>100
 	);
 	$title = $search;
 	$description = $search;
@@ -85,7 +86,7 @@ foreach ($tweets as $line){
 	$title= htmlspecialchars(htmlspecialchars_decode($line->user->name.": ".strip_tags($line->text)));
 	$description= htmlspecialchars(htmlspecialchars_decode(strip_tags($line->text)));
 	$url = htmlspecialchars("https://twitter.com/".$line->user->screen_name."/statuses/".$line->id_str);;
-	$image = (strlen($line->entities->media[0]->media_url)>0) ? htmlspecialchars($line->entities->media[0]->media_url) : null;
+	$image = (isset($line->entities->media[0]->media_url)) ? htmlspecialchars($line->entities->media[0]->media_url) : null;
 	$created_at = rfc822Date($line->created_at);
 
 ?>
@@ -95,7 +96,7 @@ foreach ($tweets as $line){
 			<![CDATA[
 			<?php
 	echo $description;
-	if (strlen($line->entities->media[0]->media_url)>0) { ?>
+	if ($image) { ?>
 				<img src="<?php echo $image; ?>">
 			<?php
 	}
