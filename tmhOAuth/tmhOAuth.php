@@ -7,13 +7,14 @@
  * REST requests. OAuth authentication is sent using an Authorization Header.
  *
  * @author themattharris
- * @version 0.8.2
+ * @version 0.8.4
  *
- * 15 June 2013
+ * 06 Aug 2014
  */
-class tmhOAuth {
-  const VERSION = '0.8.2';
+defined('__DIR__') or define('__DIR__', dirname(__FILE__));
 
+class tmhOAuth {
+  const VERSION = '0.8.4';
   var $response = array();
 
   /**
@@ -37,6 +38,7 @@ class tmhOAuth {
         // something that clearly identifies your app
         'user_agent'                 => '',
         'host'                       => 'api.twitter.com',
+        'method'                     => 'GET',
 
         'consumer_key'               => '',
         'consumer_secret'            => '',
@@ -51,6 +53,7 @@ class tmhOAuth {
         'oauth_signature_method'     => 'HMAC-SHA1',
 
         // you probably don't want to change any of these curl values
+        'curl_http_version'          => CURL_HTTP_VERSION_1_1,
         'curl_connecttimeout'        => 30,
         'curl_timeout'               => 10,
 
@@ -66,6 +69,11 @@ class tmhOAuth {
         // without it curl won't be able to create an SSL connection
         'curl_cainfo'                => __DIR__ . DIRECTORY_SEPARATOR . 'cacert.pem',
         'curl_capath'                => __DIR__,
+
+        // in some cases (very very odd ones) the SSL version must be set manually.
+        // unless you know why your are changing this, you should leave it as false
+        // to allow PHP to determine the value for this setting itself.
+        'curl_sslversion'            => false,
 
         'curl_followlocation'        => false, // whether to follow redirects or not
 
@@ -286,6 +294,30 @@ class tmhOAuth {
   }
 
   /**
+   * If the request uses multipart, and the parameter isn't a file path, prepend a space
+   * otherwise return the original value. we chose a space here as twitter whitespace trims from
+   * the beginning of the tweet. we don't use \0 here because it's the character for string
+   * termination.
+   *
+   * @param the parameter value
+   * @return string the original or modified string, depending on the request and the input parameter
+   */
+  private function multipart_escape($value) {
+    if (!$this->request_settings['multipart'] || strpos($value, '@') !== 0)
+      return $value;
+
+    // see if the parameter is a file.
+    // we split on the semi-colon as it's the delimiter used on media uploads
+    // for fields with semi-colons this will return the original string
+    list($file) = explode(';', substr($value, 1), 2);
+    if (file_exists($file))
+      return $value;
+
+    return " $value";
+  }
+
+
+  /**
    * Prepares all parameters for the base string and request.
    * Multipart parameters are ignored as they are not defined in the specification,
    * all other types of parameter are encoded for compatibility with OAuth.
@@ -319,6 +351,9 @@ class tmhOAuth {
     // Ref: Spec: 9.1.1 (1)
     uksort($params, 'strcmp');
 
+    // set this now so we're not doing it on every parameter
+    $supports_curl_file = class_exists('CurlFile', false);
+
     // encode params unless we're doing multipart
     foreach ($params as $k => $v) {
       $k = $this->request_settings['multipart'] ? $k : $this->safe_encode($k);
@@ -326,7 +361,14 @@ class tmhOAuth {
       if (is_array($v))
         $v = implode(',', $v);
 
-      $v = $this->request_settings['multipart'] ? $v : $this->safe_encode($v);
+      // we don't need to do the multipart escaping if we support curlfile
+      if ($supports_curl_file && ($v instanceof CurlFile)) {
+        // leave $v alone
+      } elseif ($this->request_settings['multipart']) {
+        $v = $this->multipart_escape($v);
+      } else {
+        $v = $this->safe_encode($v);
+      }
 
       // split parameters for the basestring and authorization header, and recreate the oauth1 array
       if ($doing_oauth1) {
@@ -340,18 +382,22 @@ class tmhOAuth {
         }
       }
       $prepared[$k] = $v;
-      $prepared_pairs[] = "{$k}={$v}";
+
+      if (!$this->request_settings['multipart'])
+        $prepared_pairs[] = "{$k}={$v}";
     }
 
     if ($doing_oauth1) {
       $this->request_settings['basestring_params'] = implode('&', $prepared_pairs_with_oauth);
     }
 
-    // setup params for GET/POST method handling
-    if (!empty($prepared_pairs)) {
+    // setup params for GET/POST/PUT method handling
+    if (!empty($prepared)) {
       $content = implode('&', $prepared_pairs);
 
       switch ($this->request_settings['method']) {
+        case 'PUT':
+          // fall through to POST as PUT should be treated the same
         case 'POST':
           $this->request_settings['postfields'] = $this->request_settings['multipart'] ? $prepared : $content;
           break;
@@ -730,26 +776,21 @@ class tmhOAuth {
 
     // configure curl
     $c = curl_init();
-    switch ($this->request_settings['method']) {
-      case 'GET':
-        if (isset($this->request_settings['querystring']))
-          $this->request_settings['url'] = $this->request_settings['url'] . '?' . $this->request_settings['querystring'];
-        break;
-      case 'POST':
-        curl_setopt($c, CURLOPT_POST, true);
-        if (isset($this->request_settings['postfields']))
-          $postfields = $this->request_settings['postfields'];
-        else
-          $postfields = array();
 
-        curl_setopt($c, CURLOPT_POSTFIELDS, $postfields);
-        break;
-      default:
-        if (isset($this->request_settings['postfields']))
-          curl_setopt($c, CURLOPT_CUSTOMREQUEST, $this->request_settings['postfields']);
+    if ($this->request_settings['method'] == 'GET' && isset($this->request_settings['querystring'])) {
+      $this->request_settings['url'] = $this->request_settings['url'] . '?' . $this->request_settings['querystring'];
+    } elseif ($this->request_settings['method'] == 'POST' || $this->request_settings['method'] == 'PUT') {
+      $postfields = array();
+      if (isset($this->request_settings['postfields']))
+        $postfields = $this->request_settings['postfields'];
+
+      curl_setopt($c, CURLOPT_POSTFIELDS, $postfields);
     }
 
+    curl_setopt($c, CURLOPT_CUSTOMREQUEST, $this->request_settings['method']);
+
     curl_setopt_array($c, array(
+      CURLOPT_HTTP_VERSION   => $this->config['curl_http_version'],
       CURLOPT_USERAGENT      => $this->config['user_agent'],
       CURLOPT_CONNECTTIMEOUT => $this->config['curl_connecttimeout'],
       CURLOPT_TIMEOUT        => $this->config['curl_timeout'],
@@ -775,6 +816,9 @@ class tmhOAuth {
 
     if ($this->config['curl_proxyuserpwd'] !== false)
       curl_setopt($c, CURLOPT_PROXYUSERPWD, $this->config['curl_proxyuserpwd']);
+
+    if ($this->config['curl_sslversion'] !== false)
+      curl_setopt($c, CURLOPT_SSLVERSION, $this->config['curl_sslversion']);
 
     if ($this->config['is_streaming']) {
       // process the body
